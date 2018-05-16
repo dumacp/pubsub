@@ -54,12 +54,9 @@ func (p *PubSub) Publish(topic string, ch <-chan string) {
 		return
 	}
 
-        for v:= range ch {
-		timeStamp := float64(time.Now().UnixNano())/1000000000
-
-		msg := fmt.Sprintf("{\"timeStamp\": %f, \"value\": %q, \"type\": \"GPRMC\"}",timeStamp, v)
+        for msg:= range ch {
 		token := p.Conn.Publish(topic, 0, false, msg)
-		if succ := token.WaitTimeout(10 * time.Second); !succ {
+		if ok := token.WaitTimeout(10 * time.Second); !ok {
 			p.Err <- errors.New("timeout Error in publish")
 		}
 		log.Printf("message: %s\n",msg)
