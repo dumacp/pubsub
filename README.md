@@ -3,7 +3,7 @@
 
 ## Example:
 
-´´´
+```
 package main
 
 import (
@@ -36,4 +36,4 @@ func main() {
 		}
 	}
 }
-´´´
+```
