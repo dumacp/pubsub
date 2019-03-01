@@ -55,6 +55,10 @@ func (p *PubSub) Publish(topic string, ch <-chan string) {
 	}
 
         for msg:= range ch {
+		if msg == "EOF" {
+			log.Println("FINISH publish function")
+			return
+		}
 		token := p.Conn.Publish(topic, 0, false, msg)
 		if ok := token.WaitTimeout(10 * time.Second); !ok {
 			p.Err <- errors.New("timeout Error in publish")

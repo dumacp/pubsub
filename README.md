@@ -23,10 +23,12 @@ func main() {
         msgChan := make(chan string)
         go pub.Publish("EVENTS/test", msgChan)
 
+	t1 := time.NewTicker(10 * time.Second):
+	defer t1.Stop()
 	count := 0
 	for {
 		select {
-		case <-time.Tick(10 * time.Second):
+		case <-t1.C:
 			timeStamp := float64(time.Now().UnixNano())/1000000000
 			count = count + 1
 			msg := fmt.Sprintf("{\"timeStamp\": %f, \"value\": %v, \"type\": \"TEST\"}",timeStamp, count)
