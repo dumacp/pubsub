@@ -23,6 +23,10 @@ var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
   fmt.Printf("MSG: %s\n", msg.Payload())
 }
 
+var onConnection MQTT.OnConnectHandler = func(c MQTT.Client) {
+	log.Println("OnConnection MQTT")
+}
+
 //NewConnection return the PubSub object. nameClient is the client name in local broker.
 func NewConnection(nameClient string) (*PubSub, error) {
 
@@ -31,6 +35,7 @@ func NewConnection(nameClient string) (*PubSub, error) {
 	opts := MQTT.NewClientOptions().AddBroker("tcp://127.0.0.1:1883")
 	opts.SetClientID(nameClient)
 	opts.SetDefaultPublishHandler(f)
+	opts.SetOnConnectHandler(f)
 	opts.SetAutoReconnect(true)
 	p.Conn =  MQTT.NewClient(opts)
 	token := p.Conn.Connect();
