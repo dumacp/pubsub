@@ -29,14 +29,16 @@ func main() {
 	defer c.Disconnect(50)
 
 	for i := int64(0); i < valueInput; i++ {
-		if token := c.Publish("TEST/primes", 0, false, fmt.Sprintf("%d", i)); token.Wait() && token.Error() != nil {
+		if token := c.Publish("primes", 0, false, fmt.Sprintf("%d", i)); token.Wait() && token.Error() != nil {
 			fmt.Println(token.Error())
 			os.Exit(1)
 		}
 	}
-	if token := c.Publish("TEST/primes", 0, false, fmt.Sprintf("%d", -1)); token.Wait() && token.Error() != nil {
-		fmt.Println(token.Error())
-		os.Exit(1)
+	for i := int64(0); i < 10; i++ {
+		if token := c.Publish("primes", 0, false, fmt.Sprintf("%d", -1)); token.Wait() && token.Error() != nil {
+			fmt.Println(token.Error())
+			os.Exit(1)
+		}
 	}
 
 	/**
