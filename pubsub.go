@@ -4,23 +4,28 @@ Package pubsub contains utility functions for working with local broker mqtt.
 package pubsub
 
 import (
-	"log"
-	"time"
 	"errors"
 	"fmt"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"log"
+	"time"
 )
 
+type Message struct {
+	Type      string      `json:"type"`
+	Value     interface{} `json:"value"`
+	Timestamp float64     `json:"timestamp"`
+}
 
 //this type store the status of connection
 type PubSub struct {
-	Conn	MQTT.Client
-	Err	chan error
+	Conn MQTT.Client
+	Err  chan error
 }
 
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
-  fmt.Printf("TOPIC: %s\n", msg.Topic())
-  fmt.Printf("MSG: %s\n", msg.Payload())
+	fmt.Printf("TOPIC: %s\n", msg.Topic())
+	fmt.Printf("MSG: %s\n", msg.Payload())
 }
 
 var onConnection MQTT.OnConnectHandler = func(c MQTT.Client) {
@@ -37,8 +42,8 @@ func NewConnection(nameClient string) (*PubSub, error) {
 	opts.SetDefaultPublishHandler(f)
 	opts.SetOnConnectHandler(onConnection)
 	opts.SetAutoReconnect(true)
-	p.Conn =  MQTT.NewClient(opts)
-	token := p.Conn.Connect();
+	p.Conn = MQTT.NewClient(opts)
+	token := p.Conn.Connect()
 	ok := token.WaitTimeout(30 * time.Second)
 	switch {
 	case !ok:
@@ -60,7 +65,7 @@ func (p *PubSub) Publish(topic string, ch <-chan string) {
 		return
 	}
 
-        for msg:= range ch {
+	for msg := range ch {
 		if msg == "EOF" {
 			log.Println("FINISH publish function")
 			return
@@ -69,7 +74,7 @@ func (p *PubSub) Publish(topic string, ch <-chan string) {
 		if ok := token.WaitTimeout(10 * time.Second); !ok {
 			p.Err <- errors.New("timeout Error in publish")
 		}
-		log.Printf("message: %s\n",msg)
+		log.Printf("message: %s\n", msg)
 	}
 }
 

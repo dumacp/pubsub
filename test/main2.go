@@ -4,18 +4,33 @@ import (
 	"flag"
 	"fmt"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"math/big"
 	"os"
 	"time"
 )
 
-var valueInput int64
+var valueInput0 *big.Int
+var valueInput1 *big.Int
+var input0 string
+var input1 string
 
 func init() {
-	flag.Int64Var(&valueInput, "valueInput", 0, "value input")
+	flag.StringVar(&input0, "startValue", "0", "value input")
+	flag.StringVar(&input1, "endValue", "0", "value input")
+	valueInput0 = new(big.Int)
+	valueInput1 = new(big.Int)
 }
 
 func main() {
 	flag.Parse()
+
+	if _, ok := valueInput0.SetString(input0, 10); !ok {
+		os.Exit(-1)
+	}
+	if _, ok := valueInput1.SetString(input1, 10); !ok {
+		os.Exit(-1)
+	}
+
 	//create a ClientOptions struct setting the broker address, clientid, turn
 	//off trace output and set the default message handler
 	opts := MQTT.NewClientOptions().AddBroker("tcp://127.0.0.1:1883")
@@ -28,8 +43,10 @@ func main() {
 	}
 	defer c.Disconnect(50)
 
-	for i := int64(0); i < valueInput; i++ {
-		if token := c.Publish("primes", 0, false, fmt.Sprintf("%d", i)); token.Wait() && token.Error() != nil {
+	inc := new(big.Int).SetInt64(1)
+	for ; valueInput0.Cmp(valueInput1) < 0; valueInput0.Add(valueInput0, inc) {
+		fmt.Printf("%v\n", valueInput0)
+		if token := c.Publish("primes", 0, false, fmt.Sprintf("%d", valueInput0)); token.Wait() && token.Error() != nil {
 			fmt.Println(token.Error())
 			os.Exit(1)
 		}

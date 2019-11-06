@@ -5,20 +5,22 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"math/big"
 	"os"
 	"reflect"
-	"strconv"
+	"runtime"
 	"time"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 )
 
-var numbers chan int64
+var numbers chan *big.Int
 var lenChannels int
 
 func init() {
-	numbers = make(chan int64)
+	numbers = make(chan *big.Int)
 	flag.IntVar(&lenChannels, "lenChannels", 1, "channel count to implement")
+	runtime.GOMAXPROCS(8)
 
 }
 
@@ -26,9 +28,12 @@ func init() {
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 	//fmt.Printf("TOPIC: %s\n", msg.Topic())
 	//fmt.Printf("MSG: %s\n", msg.Payload())
-	value, err := strconv.ParseInt(string(msg.Payload()), 10, 64)
-	if err != nil {
-		log.Println(err)
+
+	value, ok := new(big.Int).SetString(string(msg.Payload()), 10)
+	fmt.Printf("input:: %v\n", value)
+
+	if !ok {
+		log.Println("Error in parse input")
 		return
 	}
 	select {
@@ -46,13 +51,23 @@ func IsPrime(value int64) bool {
 	return value > 1
 }
 
-func IsPrimeSqrt(value int64) bool {
-	for i := int64(2); i <= int64(math.Floor(math.Sqrt(float64(value)))); i++ {
-		if value%i == 0 {
+func IsPrimeSqrt(value *big.Int) bool {
+	fmt.Printf("input IsPrimeSqrt: %v\n", value)
+	valueF := new(big.Float).SetInt(value)
+	i := new(big.Float).SetInt64(2)
+	inc := new(big.Float).SetInt64(1)
+	zs := new(big.Float)
+	for ; i.Cmp(zs.Sqrt(valueF)) <= 0; i.Add(i, inc) {
+		//fmt.Printf("Z Sqrt: %v\n", zs)
+		ii, _ := i.Int(new(big.Int))
+		m := new(big.Int)
+		z := new(big.Int)
+		if _, m = z.DivMod(value, ii, m); m.Cmp(new(big.Int).SetInt64(0)) == 0 {
 			return false
 		}
+
 	}
-	return value > 1
+	return value.Cmp(new(big.Int).SetInt64(1)) > 0
 }
 
 func SieveOfEratosthenes(value int) {
@@ -106,16 +121,15 @@ func main() {
 	}
 	fmt.Println("")
 	/**/
-	chs := make([]chan int64, lenChannels)
+	chs := make([]chan *big.Int, lenChannels)
 	selects := make([]reflect.SelectCase, lenChannels)
-	results := make([]int64, 0)
+	results := make([]*big.Int, 0)
 
 	for i := 0; i < lenChannels; i++ {
-		chs[i] = make(chan int64)
+		chs[i] = make(chan *big.Int)
 		go func(j int) {
 			for v := range chs[j] {
 				if IsPrimeSqrt(v) {
-					//fmt.Printf("%v ", v)
 					results = append(results, v)
 				}
 			}
@@ -129,7 +143,7 @@ func main() {
 			t1 = time.Now()
 			flagT = true
 		}
-		if v < int64(0) {
+		if v.Cmp(new(big.Int)) < 0 {
 			break
 		}
 
