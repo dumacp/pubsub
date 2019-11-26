@@ -6,9 +6,10 @@ package pubsub
 import (
 	"errors"
 	"fmt"
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"log"
 	"time"
+
+	MQTT "github.com/eclipse/paho.mqtt.golang"
 )
 
 type Message struct {
@@ -74,7 +75,7 @@ func (p *PubSub) Publish(topic string, ch <-chan string) {
 		if ok := token.WaitTimeout(10 * time.Second); !ok {
 			p.Err <- errors.New("timeout Error in publish")
 		}
-		log.Printf("message: %s\n", msg)
+		log.Printf("TOPIC: %s; message: %s\n", topic, msg)
 	}
 }
 
