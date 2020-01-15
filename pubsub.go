@@ -4,7 +4,6 @@ Package pubsub contains utility functions for working with local broker mqtt.
 package pubsub
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -24,16 +23,25 @@ type PubSub struct {
 	Err  chan error
 }
 
+var subscriptions map[string]chan []byte
+
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
 	fmt.Printf("TOPIC: %s\n", msg.Topic())
 	fmt.Printf("MSG: %s\n", msg.Payload())
+
+	vch, ok := subscriptions[string(msg.Topic())]
+	if ok {
+		select {
+		case vch <- msg.Payload():
+		default:
+		}
+	}
 }
 
-var subcriptions = make([]string, 0)
 var onConnection MQTT.OnConnectHandler = func(c MQTT.Client) {
 	log.Println("OnConnection MQTT")
-	for _, v := range subcriptions {
-		t := c.Subscribe(v, 0, nil)
+	for k := range subscriptions {
+		t := c.Subscribe(k, 0, nil)
 		if t.WaitTimeout(3*time.Second) && t.Error() != nil {
 			log.Printf("error subzcription: %s", t.Error())
 		}
@@ -55,7 +63,7 @@ func NewConnection(nameClient string) (*PubSub, error) {
 	ok := token.WaitTimeout(30 * time.Second)
 	switch {
 	case !ok:
-		return nil, errors.New("Timeout Error at the beginning of the connection")
+		return nil, fmt.Errorf("Timeout Error at the beginning of the connection")
 	case token.Error() != nil:
 		return nil, token.Error()
 	}
@@ -66,7 +74,7 @@ func NewConnection(nameClient string) (*PubSub, error) {
 }
 
 //New return the PubSub object. Without start connection, nameClient is the client name in local broker.
-func New(nameClient string) (*PubSub, error) {
+func New(nameClient string) *PubSub {
 
 	p := &PubSub{}
 
@@ -76,33 +84,35 @@ func New(nameClient string) (*PubSub, error) {
 	opts.SetOnConnectHandler(onConnection)
 	opts.SetAutoReconnect(true)
 	p.Conn = MQTT.NewClient(opts)
+	return p
+}
 
 //Start connection
-func (p *PubSub) Start() (error) {
+func (p *PubSub) Start() error {
 	token := p.Conn.Connect()
 	ok := token.WaitTimeout(30 * time.Second)
 	switch {
 	case !ok:
-		return nil, errors.New("Timeout Error at the beginning of the connection")
+		return fmt.Errorf("Timeout Error at the beginning of the connection")
 	case token.Error() != nil:
-		return nil, token.Error()
+		return token.Error()
 	}
 
 	p.Err = make(chan error)
 
-	return p, nil
+	return nil
 }
 
 //AddSubscription add new subcription before Connection
-func (p *PubSub) AddSubscription(topic string) {
-	subcriptions = append(subcriptions, topic)
+func (p *PubSub) AddSubscription(topic string, ch chan []byte) {
+	subscriptions[topic] = ch
 }
 
 //Publish should be executed with a Go routine. The channel obtains the content that must be sent to the local broker.
 func (p *PubSub) Publish(topic string, ch <-chan string) {
 
 	if p.Conn == nil {
-		p.Err <- errors.New("Nil Connection Error, execute NewConnection()")
+		p.Err <- fmt.Errorf("Nil Connection Error, execute NewConnection()")
 		return
 	}
 
@@ -113,7 +123,7 @@ func (p *PubSub) Publish(topic string, ch <-chan string) {
 		}
 		token := p.Conn.Publish(topic, 0, false, msg)
 		if ok := token.WaitTimeout(10 * time.Second); !ok {
-			p.Err <- errors.New("timeout Error in publish")
+			p.Err <- fmt.Errorf("timeout Error in publish")
 		}
 		log.Printf("TOPIC: %s; message: %s\n", topic, msg)
 	}
