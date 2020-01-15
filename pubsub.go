@@ -26,8 +26,8 @@ type PubSub struct {
 var subscriptions map[string]chan []byte
 
 var f MQTT.MessageHandler = func(client MQTT.Client, msg MQTT.Message) {
-	fmt.Printf("TOPIC: %s\n", msg.Topic())
-	fmt.Printf("MSG: %s\n", msg.Payload())
+	// fmt.Printf("TOPIC: %s\n", msg.Topic())
+	// fmt.Printf("MSG: %s\n", msg.Payload())
 
 	vch, ok := subscriptions[string(msg.Topic())]
 	if ok {
@@ -77,6 +77,7 @@ func NewConnection(nameClient string) (*PubSub, error) {
 func New(nameClient string) *PubSub {
 
 	p := &PubSub{}
+	subscriptions = make(map[string]chan []byte)
 
 	opts := MQTT.NewClientOptions().AddBroker("tcp://127.0.0.1:1883")
 	opts.SetClientID(nameClient)
@@ -125,7 +126,7 @@ func (p *PubSub) Publish(topic string, ch <-chan string) {
 		if ok := token.WaitTimeout(10 * time.Second); !ok {
 			p.Err <- fmt.Errorf("timeout Error in publish")
 		}
-		log.Printf("TOPIC: %s; message: %s\n", topic, msg)
+		// log.Printf("TOPIC: %s; message: %s\n", topic, msg)
 	}
 }
 
